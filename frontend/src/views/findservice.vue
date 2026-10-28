@@ -67,24 +67,12 @@
           <p>{{ error }}</p>
           <button class="mt-4 rounded bg-red-700 px-4 py-2 text-white" @click="execute">Retry</button>
         </div>
-        <div v-else-if="!services || !services.length" class="rounded border border-dashed border-gray-400 p-6 text-center text-gray-600">No services found.</div>
-        <table v-else class="min-w-full shadow-md rounded">
-          <thead class="bg-gray-50 text-xl">
-            <tr>
-              <th class="p-4 text-left" style="width: 25%;">Service Name</th>
-              <th class="p-4 text-left" style="width: 75%;">Service Description</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-300">
-            <tr @click="$router.push({name: 'servicedetails', params: { id: service._id } })" 
-            v-for="service in services" :key="service._id" class="cursor-pointer"
-              :class="{ 'hoverRow': hoverId === service._id }" @mouseenter="hoverId = service._id"
-              @mouseleave="hoverId = null">
-              <td class="p-4 text-left">{{ service.name }}</td>
-              <td class="p-4 text-left text-sm">{{ service.description }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          v-else
+          :columns="serviceColumns"
+          :rows="serviceRows"
+          @row-click="openService"
+        />
       </div>
     </div>
   </main>
@@ -92,16 +80,27 @@
 
 <script setup>
 // Composition API: search state and service results use refs with mount-time API loading.
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { getServices, searchServices } from '../api/api'
 import { useApi } from '../composables/useApi'
+import DataTable from '../components/DataTable.vue'
 
 const serviceApi = useApi(async (query) => query ? searchServices(query) : getServices())
 const { data: services, loading, error, execute } = serviceApi
 const searchBy = ref(null)
 const name = ref(null)
 const description = ref(null)
-const hoverId = ref(null)
+const router = useRouter()
+const serviceColumns = [
+  { label: 'Service Name', field: 'name' },
+  { label: 'Service Description', field: 'description' }
+]
+const serviceRows = computed(() => services.value || [])
+
+function openService(service) {
+  router.push({ name: 'servicedetails', params: { id: service._id } })
+}
 
 async function loadData() {
   searchBy.value = ''

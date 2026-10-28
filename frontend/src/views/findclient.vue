@@ -74,44 +74,43 @@
           <p>{{ error }}</p>
           <button class="mt-4 rounded bg-red-700 px-4 py-2 text-white" @click="execute">Retry</button>
         </div>
-        <div v-else-if="!clients || !clients.length" class="rounded border border-gray-300 bg-gray-50 p-6 text-center italic">No clients match this view.</div>
-        <table v-else class="min-w-full shadow-md rounded">
-          <thead class="bg-gray-50 text-xl">
-            <tr>
-              <th class="p-4 text-left">Name</th>
-              <th class="p-4 text-left">Phone number</th>
-              <th class="p-4 text-left">City</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-300">
-            <tr @click="$router.push({ name: 'clientdetails', params: { id: client._id } })" v-for="client in clients"
-              :key="client._id" class="cursor-pointer" :class="{ 'hoverRow': hoverId === client._id }"
-              @mouseenter="hoverId = client._id" @mouseleave="hoverId = null">
-              <td class="p-2 text-left">
-                {{ client.firstName + ' ' + client.lastName }}
-              </td>
-              <td class="p-2 text-left">
-                {{ client.phoneNumber.primary }}
-              </td>
-              <td class="p-2 text-left">{{ client.address.city }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          v-else
+          :columns="clientColumns"
+          :rows="clientRows"
+          @row-click="openClient"
+        />
       </div>
     </div>
   </main>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { getClients, searchClients } from '../api/api'
 import { useApi } from '../composables/useApi'
+import DataTable from '../components/DataTable.vue'
 
 const searchBy = ref('')
 const firstName = ref('')
 const lastName = ref('')
 const phoneNumber = ref('')
-const hoverId = ref(null)
+const router = useRouter()
+
+const clientColumns = [
+  { label: 'Name', field: '_name' },
+  { label: 'Phone number', field: 'phoneNumber.primary' },
+  { label: 'City', field: 'address.city' }
+]
+const clientRows = computed(() => (clients.value || []).map(client => ({
+  ...client,
+  _name: `${client.firstName || ''} ${client.lastName || ''}`.trim()
+})))
+
+function openClient(client) {
+  router.push({ name: 'clientdetails', params: { id: client._id } })
+}
 
 const clientApi = useApi(async (query) => query ? searchClients(query) : getClients())
 const { data: clients, loading, error, execute } = clientApi

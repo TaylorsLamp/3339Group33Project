@@ -65,26 +65,12 @@
           <p>{{ error }}</p>
           <button class="mt-4 rounded border border-orange-800 px-4 py-2 font-semibold" @click="execute">Retry</button>
         </div>
-        <div v-else-if="!events || !events.length" class="rounded bg-gray-100 p-6 text-center font-medium">No events available.</div>
-        <table v-else class="min-w-full shadow-md rounded">
-          <thead class="bg-gray-50 text-xl">
-            <tr>
-              <th class="p-4 text-left">Event Name</th>
-              <th class="p-4 text-left">Event Date</th>
-              <th class="p-4 text-left">Event Address</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-300">
-            <tr @click="$router.push({name: 'eventdetails', params: { id: event._id } })"
-              v-for="event in events" :key="event._id" class="cursor-pointer"
-              :class="{ 'hoverRow': hoverId === event._id }" @mouseenter="hoverId = event._id"
-              @mouseleave="hoverId = null">
-              <td class="p-2 text-left">{{ event.name }}</td>
-              <td class="p-2 text-left">{{ formatDate(event.date) }}</td>
-              <td class="p-2 text-left">{{ event.address.line1 }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          v-else
+          :columns="eventColumns"
+          :rows="eventRows"
+          @row-click="openEvent"
+        />
       </div>
     </div>
   </main>
@@ -92,16 +78,28 @@
 
 <script setup>
 // Composition API: search inputs and event results use refs instead of Options API data and methods.
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { getEvents, searchEvents } from '../api/api'
 import { useApi } from '../composables/useApi'
+import DataTable from '../components/DataTable.vue'
 
 const eventApi = useApi(async (query) => query ? searchEvents(query) : getEvents())
 const { data: events, loading, error, execute } = eventApi
 const searchBy = ref(null)
 const name = ref(null)
 const eventDate = ref(null)
-const hoverId = ref(null)
+const router = useRouter()
+const eventColumns = [
+  { label: 'Event Name', field: 'name' },
+  { label: 'Event Date', field: '_date', render: row => formatDate(row.date) },
+  { label: 'Event Address', field: 'address.line1' }
+]
+const eventRows = computed(() => (events.value || []).map(event => ({ ...event, _date: event.date })))
+
+function openEvent(event) {
+  router.push({ name: 'eventdetails', params: { id: event._id } })
+}
 
 async function loadData() {
   searchBy.value = null
