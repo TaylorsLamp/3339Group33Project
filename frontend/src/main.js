@@ -7,6 +7,7 @@ import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 //state management library
 import { createPinia } from 'pinia'
+import { useLoggedInUserStore } from './store/loggedInUser'
 
 const app = createApp(App);
 
@@ -17,8 +18,9 @@ pinia.use(({ store }) => {
   store.$router = markRaw(router)
 });
 
-//add pinia object to our instance
+//add pinia object to our instance and restore persisted authentication before routes initialize
 app.use(pinia)
+useLoggedInUserStore().restoreSession()
 app.use(router);
 
 const options = {

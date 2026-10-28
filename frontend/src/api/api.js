@@ -3,7 +3,7 @@
 import axios from "axios";
 
 // Create HTTP client with the base URL, and specify that the data sent in the request body is JSON
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_ROOT_API,
   headers: {
     "Content-Type": "application/json",
@@ -19,7 +19,9 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response.status === 401) {
-      localStorage.removeItem("authToken");
+      try {
+        if (typeof localStorage !== "undefined") localStorage.removeItem("authToken");
+      } catch (storageError) {}
       delete apiClient.defaults.headers.common["Authorization"];
 
       const [{ useLoggedInUserStore }, { default: router }] = await Promise.all([
@@ -27,9 +29,10 @@ apiClient.interceptors.response.use(
         import("../router/index"),
       ]);
       const store = useLoggedInUserStore();
-      store.$patch({ name: "", role: "", isLoggedIn: false });
+      if (typeof store.clearSession === "function") store.clearSession();
+      else store.$patch({ name: "", role: "", isLoggedIn: false });
       if (router.currentRoute.value.path !== "/login") {
-        router.push("/login");
+        router.push({ path: "/login", query: { redirect: router.currentRoute.value.fullPath } });
       }
     }
 
@@ -48,12 +51,12 @@ apiClient.interceptors.response.use(
 
 // Login related API calls
 // If user logs in successfully, this login sets the Authorization header
-function setAuthHeader(token) {
+export function setAuthHeader(token) {
   apiClient.defaults.headers.common["Authorization"] = "Bearer " + token;
 }
 
 // When user logs out, this function removes the Authorization header from apiClient
-function removeAuthHeader() {
+export function removeAuthHeader() {
   delete apiClient.defaults.headers.common["Authorization"];
 }
 
@@ -77,15 +80,20 @@ export async function loginUser(username, password) {
     username,
     password,
   });
-  const token = response.data.token;
-  localStorage.setItem("authToken", token);
+  const token = response.data?.token;
+  if (typeof token !== "string" || !token) throw new Error("Login failed: no session token");
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem("authToken", token);
+  } catch (storageError) {}
   setAuthHeader(token);
   return token;
 }
 
 // API call to log the user out
 export function logoutUser() {
-  localStorage.removeItem("authToken");
+  try {
+    if (typeof localStorage !== "undefined") localStorage.removeItem("authToken");
+  } catch (storageError) {}
   removeAuthHeader();
 }
 
