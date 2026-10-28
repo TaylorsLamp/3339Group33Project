@@ -1,10 +1,11 @@
 // This file contains all API calls to the API endpoints
 // import axios to make API calls
 import axios from "axios";
+import { rootApi } from '../config.js'
 
 // Create HTTP client with the base URL, and specify that the data sent in the request body is JSON
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_ROOT_API,
+  baseURL: rootApi,
   headers: {
     "Content-Type": "application/json",
   },

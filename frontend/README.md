@@ -1,22 +1,47 @@
 # Data Platform Frontend
 
-This project uses [VueJS 3](https://vuejs.org/) with [Vite](https://vitejs.dev/) and [TailwindCSS](https://tailwindcss.com/).
-For form validation [Vuelidate](https://vuelidate-next.netlify.app/) is used.
+Vue 3, Vite, Tailwind CSS, Vuelidate, and Pinia frontend.
 
-State management is done via [Pinia](https://pinia.vuejs.org/).
+## Prerequisites
 
-## Project setup
+- Node.js 18 or newer
+- npm 9 or newer
+- A running backend and a MongoDB instance for complete local functionality
 
-    npm install
+## Install
 
-### Before startup
-You need to either have a local backend running and or use a cloud deployed backend.
+```sh
+npm install
+```
 
-Setup a .env file with following variables, e.g.:
+## Environment configuration
 
-    VITE_ROOT_API=http://localhost:3000
+Copy or edit `.env` in this directory. `VITE_ROOT_API` is public and is embedded when Vite builds:
 
-VITE_ROOT_API is the URL for the backend API, either on localhost or in the cloud.
-### Compiles and hot-reloads for development
+```dotenv
+VITE_ROOT_API=<backend API origin or deployment URL>
+```
 
-    npm run dev
+Use a full origin for a separately hosted API. If the API is proxied under the same origin, use a path such as `/api`. Do not place secrets in this file. Restart development or rebuild after changing this value.
+
+## Start and build
+
+```sh
+npm run dev
+npm run build
+npm run serve
+# Alias preview command:
+npm run preview
+```
+
+`npm run dev` starts the development server. `npm run build` writes the production files to `dist`; `npm run serve` or `npm run preview` previews that build.
+
+## Static hosting and SPA fallback
+
+The router uses browser history mode. The host must serve `index.html` as the fallback for unknown application routes and must still serve files from `assets` and the public directory normally. Typical examples:
+
+- Netlify: `/public/_redirects` with `/* /index.html 200`
+- Nginx: `try_files $uri $uri/ /index.html`
+- Apache: rewrite unknown paths to `index.html`
+
+Vite is configured with a relative base for static deployments. Deploy the contents of `dist` only, configure the production `VITE_ROOT_API` before building, and verify direct-route refresh, asset loading, and API calls after deployment.

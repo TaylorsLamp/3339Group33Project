@@ -5,7 +5,7 @@
     <div id="_container" class="min-h-screen">
       <header class="w-full">
         <section class="text-center">
-          <img class="m-auto" src="@\assets\DanPersona.svg" />
+          <img class="m-auto" :src="personaLogo" alt="Data Platform" />
         </section>
         <!--Navigation bar-->
         <nav class="mt-10">
@@ -92,6 +92,7 @@
 <script setup>
 // Composition API: reactive organization state and mount-time data loading replace Options API state and created().
 import { onMounted, ref } from 'vue'
+import personaLogo from '@/assets/DanPersona.svg'
 import { useLoggedInUserStore } from './store/loggedInUser'
 import { getOrgName } from './api/api'
 
