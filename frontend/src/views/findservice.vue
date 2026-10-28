@@ -61,7 +61,14 @@
         <h3 class="italic">Click table row to view service details</h3>
       </div>
       <div class="flex flex-col col-span-2">
-        <table class="min-w-full shadow-md rounded">
+        <div v-if="loading" class="rounded bg-teal-50 p-6 text-center font-bold text-teal-700 animate-pulse">Loading service directory…</div>
+        <div v-else-if="error" class="rounded border border-red-700 bg-white p-6 text-red-800 shadow-sm">
+          <p class="text-lg font-bold">Service list error</p>
+          <p>{{ error }}</p>
+          <button class="mt-4 rounded bg-red-700 px-4 py-2 text-white" @click="execute">Retry</button>
+        </div>
+        <div v-else-if="!services || !services.length" class="rounded border border-dashed border-gray-400 p-6 text-center text-gray-600">No services found.</div>
+        <table v-else class="min-w-full shadow-md rounded">
           <thead class="bg-gray-50 text-xl">
             <tr>
               <th class="p-4 text-left" style="width: 25%;">Service Name</th>
@@ -87,10 +94,10 @@
 // Composition API: search state and service results use refs with mount-time API loading.
 import { onMounted, ref } from 'vue'
 import { getServices, searchServices } from '../api/api'
-import { useToast } from 'vue-toastification'
+import { useApi } from '../composables/useApi'
 
-const toast = useToast()
-const services = ref(null)
+const serviceApi = useApi(async (query) => query ? searchServices(query) : getServices())
+const { data: services, loading, error, execute } = serviceApi
 const searchBy = ref(null)
 const name = ref(null)
 const description = ref(null)
@@ -100,26 +107,14 @@ async function loadData() {
   searchBy.value = ''
   name.value = ''
   description.value = ''
-  try {
-    services.value = await getServices()
-  } catch (error) {
-    toast.error(error)
-  }
+  await execute()
 }
 
 async function handleSubmitForm() {
   if (searchBy.value === 'Service Name' && name.value) {
-    try {
-      services.value = await searchServices({ searchBy: 'name', name: name.value })
-    } catch (error) {
-      toast.error(error)
-    }
+    await execute({ searchBy: 'name', name: name.value })
   } else if (searchBy.value === 'Service Description' && description.value) {
-    try {
-      services.value = await searchServices({ searchBy: 'description', description: description.value })
-    } catch (error) {
-      toast.error('Error searching services:', error)
-    }
+    await execute({ searchBy: 'description', description: description.value })
   }
 }
 

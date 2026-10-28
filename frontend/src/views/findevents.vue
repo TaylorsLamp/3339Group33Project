@@ -59,7 +59,14 @@
         <h3 class="italic">Click table row to view event details</h3>
       </div>
       <div class="flex flex-col col-span-2">
-        <table class="min-w-full shadow-md rounded">
+        <div v-if="loading" class="rounded border border-purple-300 bg-purple-50 p-6 text-center text-lg text-purple-800 animate-pulse">Fetching event schedule…</div>
+        <div v-else-if="error" class="rounded-lg border-l-4 border-orange-600 bg-orange-100 p-5 text-orange-950">
+          <p class="font-bold">Events could not be loaded</p>
+          <p>{{ error }}</p>
+          <button class="mt-4 rounded border border-orange-800 px-4 py-2 font-semibold" @click="execute">Retry</button>
+        </div>
+        <div v-else-if="!events || !events.length" class="rounded bg-gray-100 p-6 text-center font-medium">No events available.</div>
+        <table v-else class="min-w-full shadow-md rounded">
           <thead class="bg-gray-50 text-xl">
             <tr>
               <th class="p-4 text-left">Event Name</th>
@@ -87,10 +94,10 @@
 // Composition API: search inputs and event results use refs instead of Options API data and methods.
 import { onMounted, ref } from 'vue'
 import { getEvents, searchEvents } from '../api/api'
-import { useToast } from 'vue-toastification'
+import { useApi } from '../composables/useApi'
 
-const toast = useToast()
-const events = ref(null)
+const eventApi = useApi(async (query) => query ? searchEvents(query) : getEvents())
+const { data: events, loading, error, execute } = eventApi
 const searchBy = ref(null)
 const name = ref(null)
 const eventDate = ref(null)
@@ -100,27 +107,15 @@ async function loadData() {
   searchBy.value = null
   name.value = null
   eventDate.value = null
-  try {
-    events.value = await getEvents()
-  } catch (error) {
-    toast.error('loadData error', error)
-  }
+  await execute()
 }
 
 async function handleSubmitForm() {
   if (searchBy.value === 'Event Name' && name.value) {
-    try {
-      events.value = await searchEvents({ searchBy: 'name', name: name.value })
-    } catch (error) {
-      toast.error('Error searching events', error)
-    }
+    await execute({ searchBy: 'name', name: name.value })
   } else if (searchBy.value === 'Event Date' && eventDate.value) {
-    try {
-      const formattedDate = new Date(eventDate.value).toISOString().substring(0, 10)
-      events.value = await searchEvents({ searchBy: 'date', eventDate: formattedDate })
-    } catch (error) {
-      toast.error('Error searching events:', error)
-    }
+    const formattedDate = new Date(eventDate.value).toISOString().substring(0, 10)
+    await execute({ searchBy: 'date', eventDate: formattedDate })
   }
 }
 

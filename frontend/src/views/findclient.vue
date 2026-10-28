@@ -68,7 +68,14 @@
       </div>
       <!--Table showing list of Clients-->
       <div class="flex flex-col col-span-2">
-        <table class="min-w-full shadow-md rounded">
+        <div v-if="loading" class="rounded bg-blue-50 p-6 text-center font-semibold text-blue-700 animate-pulse">Loading clients…</div>
+        <div v-else-if="error" class="rounded border-2 border-red-500 bg-red-50 p-6 text-red-900">
+          <p class="font-bold">Could not load the client list</p>
+          <p>{{ error }}</p>
+          <button class="mt-4 rounded bg-red-700 px-4 py-2 text-white" @click="execute">Retry</button>
+        </div>
+        <div v-else-if="!clients || !clients.length" class="rounded border border-gray-300 bg-gray-50 p-6 text-center italic">No clients match this view.</div>
+        <table v-else class="min-w-full shadow-md rounded">
           <thead class="bg-gray-50 text-xl">
             <tr>
               <th class="p-4 text-left">Name</th>
@@ -96,44 +103,32 @@
 </template>
 
 <script setup>
-// Composition API: search inputs and list state are managed with refs and loaded by the mount lifecycle hook.
 import { onMounted, ref } from 'vue'
 import { getClients, searchClients } from '../api/api'
-import { useToast } from 'vue-toastification'
+import { useApi } from '../composables/useApi'
 
-const toast = useToast()
-const clients = ref(null)
 const searchBy = ref('')
 const firstName = ref('')
 const lastName = ref('')
 const phoneNumber = ref('')
 const hoverId = ref(null)
 
+const clientApi = useApi(async (query) => query ? searchClients(query) : getClients())
+const { data: clients, loading, error, execute } = clientApi
+
 async function loadData() {
   searchBy.value = ''
   firstName.value = ''
   lastName.value = ''
   phoneNumber.value = ''
-  try {
-    clients.value = await getClients()
-  } catch (error) {
-    toast.error(error)
-  }
+  await execute()
 }
 
 async function handleSubmitForm() {
   if (searchBy.value === 'Client Name' && (firstName.value || lastName.value)) {
-    try {
-      clients.value = await searchClients({ searchBy: 'name', firstName: firstName.value, lastName: lastName.value })
-    } catch (error) {
-      toast.error(error)
-    }
+    await execute({ searchBy: 'name', firstName: firstName.value, lastName: lastName.value })
   } else if (searchBy.value === 'Client Number' && phoneNumber.value) {
-    try {
-      clients.value = await searchClients({ searchBy: 'number', phoneNumber: phoneNumber.value })
-    } catch (error) {
-      toast.error(error)
-    }
+    await execute({ searchBy: 'number', phoneNumber: phoneNumber.value })
   }
 }
 

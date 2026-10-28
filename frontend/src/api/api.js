@@ -10,10 +10,46 @@ const apiClient = axios.create({
   },
 });
 
+// One response interceptor is the frontend's single source of API error normalization.
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (!error.response) {
+      throw new Error("Unable to reach the server");
+    }
+
+    if (error.response.status === 401) {
+      localStorage.removeItem("authToken");
+      delete apiClient.defaults.headers.common["Authorization"];
+
+      const [{ useLoggedInUserStore }, { default: router }] = await Promise.all([
+        import("../store/loggedInUser"),
+        import("../router/index"),
+      ]);
+      const store = useLoggedInUserStore();
+      store.$patch({ name: "", role: "", isLoggedIn: false });
+      if (router.currentRoute.value.path !== "/login") {
+        router.push("/login");
+      }
+    }
+
+    const body = error.response.data;
+    let message = "";
+    if (typeof body === "string") message = body;
+    else if (body?.errors?.[0]) {
+      const firstError = body.errors[0];
+      message = firstError.msg || firstError.message || String(firstError);
+    } else if (body?.message) message = body.message;
+    else if (body?.error) message = typeof body.error === "string" ? body.error : body.error.message;
+
+    throw new Error(message || (error.response.status >= 500 ? "Server error" : "Request failed"));
+  }
+);
+
 // Login related API calls
-// If user logs in successfully, this login sets a header to "apiClient" called "Authorization" with the value of "Bearer <token>" This security token is used to validate API calls
+// If user logs in successfully, this login sets the Authorization header
 function setAuthHeader(token) {
-  apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  apiClient.defaults.headers.common["Authorization"] = "Bearer " + token;
 }
 
 // When user logs out, this function removes the Authorization header from apiClient
@@ -37,23 +73,14 @@ function getErrorMessageFromResponseBody(string) {
 
 // API call to log the user in
 export async function loginUser(username, password) {
-  try {
-    const response = await apiClient.post("/users/login", {
-      username,
-      password,
-    });
-    const token = response.data.token;
-    localStorage.setItem("authToken", token);
-    setAuthHeader(token);
-    return token;
-  } catch (error) {
-    if (error.response.status === 400) {
-      let errorString = getErrorMessageFromResponseBody(
-        error.response.data.message
-      );
-      throw new Error(errorString); // API errors get thrown here
-    } else throw error;
-  }
+  const response = await apiClient.post("/users/login", {
+    username,
+    password,
+  });
+  const token = response.data.token;
+  localStorage.setItem("authToken", token);
+  setAuthHeader(token);
+  return token;
 }
 
 // API call to log the user out
