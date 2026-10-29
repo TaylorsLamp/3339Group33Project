@@ -79,11 +79,18 @@ const sortedRows = computed(() => {
   return [...props.rows].sort((a, b) => {
     const aValue = getFieldValue(a, sortField.value)
     const bValue = getFieldValue(b, sortField.value)
-    const aText = aValue == null ? '' : String(aValue).toLowerCase()
-    const bText = bValue == null ? '' : String(bValue).toLowerCase()
-    if (aText < bText) return sortDirection.value === 'asc' ? -1 : 1
-    if (aText > bText) return sortDirection.value === 'asc' ? 1 : -1
-    return 0
+    let comparison = 0
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      comparison = aValue - bValue
+    } else {
+      comparison = String(aValue ?? '').localeCompare(String(bValue ?? ''), undefined, {
+        numeric: true,
+        sensitivity: 'base'
+      })
+    }
+
+    return sortDirection.value === 'asc' ? comparison : -comparison
   })
 })
 
@@ -127,7 +134,7 @@ watch(() => props.rows, () => {
   currentPage.value = 1
   sortField.value = null
   sortDirection.value = null
-}, { deep: true })
+})
 
 watch(totalPages, (value) => {
   if (currentPage.value > value) currentPage.value = value
